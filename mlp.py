@@ -156,10 +156,10 @@ class mlp:
         return (np.dot(upper_layer_error, self.weights[layer + 1] * self.derivative(self.pobudzenia[layer], layer)))
 
     def cross_entropy(self, p, q):
-        wynik = []
+        wynik = 0
         for j in range(len(p)):
-            wynik.append(-p[j] * math.log(q[j]))
-        return np.array(wynik)
+            wynik +=(-p[j] * math.log(q[j]+1e-15))
+        return wynik
 
     def errors_back_prop(self, labels):
         self.errors[len(self.layers_size) - 2] = self.loss_function_last_layer(labels)
@@ -181,25 +181,34 @@ class mlp:
             self.zmiana_biasow[i] *= 0
             self.zmiana_wag[i] *= 0
 
-    def gradient_descent(self, wejscia, etykiety):
+    def gradient_descent(self, wejscia, etykiety, loss=0):
         for i in range(len(wejscia)):
-            self.uczenie(wejscia[i], etykiety[i])
+            loss += self.uczenie(wejscia[i], etykiety[i])
         self.zamiana_wag()
+        return loss/len(wejscia)
 
 
     def uczenie(self, wejscie, _etykieta):
         etykieta = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         etykieta[_etykieta] = 1
-        self.forward_propagation(wejscie)
+        forward = self.forward_propagation(wejscie)
+        cross_entropy = self.cross_entropy(forward, etykieta)
         self.errors_back_prop(etykieta)
         self.set_change()
+        return cross_entropy
 
     def uczenie_calosc(self, wejscia, etykiety, epoki, batch_size):
         for epoka in range(epoki):
-            minibatch_etykiety = etykiety[epoka*batch_size:(epoka+1)*batch_size]
-            minibach_wejscia = wejscia[epoka*batch_size:(epoka+1)*batch_size]
-            for i in range(epoki):
-                self.gradient_descent(minibach_wejscia, minibatch_etykiety)
+            loss=0
+            randomstart = np.round(self.get_random_from_range(0,50000-batch_size-1))
+            minibatch_etykiety = etykiety[randomstart:randomstart+batch_size]
+            minibach_wejscia = wejscia[randomstart:randomstart+batch_size]
+            for i in range(batch_size):
+                loss = self.gradient_descent(minibach_wejscia, minibatch_etykiety)
+                if loss < self.break_rule:
+                    return epoka
+            print(epoka, loss)
+        return epoki
 
     def wynikowa_etykieta(self, etykiety):
         max = 0
@@ -213,12 +222,13 @@ class mlp:
     def validate(self, wejscia, etykiety):
         wszystkie = 0
         dobre = 0
+        macierz_odpowiedzi = np.zeros((10,10))
         for i in range(len(wejscia)):
             wynik = self.wynikowa_etykieta(self.forward_propagation(wejscia[i]))
-            print(wynik)
             if (wynik == etykiety[i]):
                 wszystkie += 1
                 dobre += 1
             else:
                 wszystkie += 1
-        return dobre, wszystkie
+            macierz_odpowiedzi[wynik][etykiety[i]]+=1
+        return round(dobre/(wszystkie), 4) *100,macierz_odpowiedzi
