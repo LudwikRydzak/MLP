@@ -200,7 +200,7 @@ class mlp:
     def uczenie_calosc(self, wejscia, etykiety, epoki, batch_size):
         for epoka in range(epoki):
             loss=0
-            randomstart = np.round(self.get_random_from_range(0,50000-batch_size-1))
+            randomstart = round(self.get_random_from_range([0,50000-batch_size-1]))
             minibatch_etykiety = etykiety[randomstart:randomstart+batch_size]
             minibach_wejscia = wejscia[randomstart:randomstart+batch_size]
             for i in range(batch_size):

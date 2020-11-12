@@ -23,7 +23,7 @@ vallabs = labels[59000:60000]
 # print(f'{procent}%')
 # print(macierz_odpowiedzi)
 testowanie = Testowanie()
-testowanie.test_batch_size(img,labs, valimg, vallabs)
+testowanie.test_activation_function(img,labs, valimg, vallabs)
 
 # print(mndata.display(images[0]))
 # print(labels[0])
