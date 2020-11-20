@@ -11,12 +11,15 @@ class mlp:
         self.weights = []
         self.biases = []
         self.zmiana_wag = []
+        self.poprzednia_zmiana_wag = []
+        self.gradient_wag = []
         self.zmiana_biasow = []
         self.pobudzenia = []
         self.wyjscia = []
         self.wejscia = []
         self.errors = []
         self.wspolczynnik_uczenia = learning_rate
+        self.sumowane_kwadraty_zmian = []
         for l in range(len(_layers_size) - 1):  # liczba macierzy
             self.weights.append(
                 np.array([[(self.get_random_from_range(_weight_range)) for col in range(_layers_size[l])] for row in
@@ -27,7 +30,11 @@ class mlp:
             self.wejscia.append(np.array([]))
             self.errors.append(np.array([]))
             self.zmiana_wag.append(np.zeros((_layers_size[l+1],_layers_size[l])))
+            self.gradient_wag.append(np.zeros((_layers_size[l+1],_layers_size[l])))
+            self.poprzednia_zmiana_wag.append(np.zeros((_layers_size[l+1],_layers_size[l])))
+            self.sumowane_kwadraty_zmian.append(np.zeros((_layers_size[l+1],_layers_size[l+1])))
             self.zmiana_biasow.append(np.zeros(_layers_size[l+1]))
+
     def display_mlp(self):
         for i in self.weights:
             print('-------------')
@@ -167,13 +174,25 @@ class mlp:
             self.errors[len(self.layers_size) - 3 - i] = self.loss_function_hidden_layer(
                 self.errors[len(self.layers_size) - 2 - i], len(self.layers_size) - 3 - i)
 
-    def set_change(self):
+    def set_gradient_wag(self):
         for i in range(len(self.layers_size) - 1):
-            self.zmiana_wag[i] += -np.outer(self.errors[i], self.wejscia[i]) * self.wspolczynnik_uczenia
+            self.sumowane_kwadraty_zmian[i] += (self.gradient_wag[i]**2)
+            self.gradient_wag[i] += -np.outer(self.errors[i], self.wejscia[i])
             self.zmiana_biasow[i] += -self.errors[i] * self.wspolczynnik_uczenia
 
 
-    def zamiana_wag(self):
+
+    def zamiana_wag(self, opcja_momentum):
+        if(opcja_momentum == 1):
+            self.momentum()
+        elif(opcja_momentum == 2):
+            self.momentum_nesterova()
+        elif(opcja_momentum == 3):
+            self.adagrad()
+        elif(opcja_momentum == 4):
+
+        elif(opcja_momentum == 5):
+
         for i in range(len(self.weights)):
             self.weights[i] -= self.zmiana_wag[i]
             self.biases[i] -= self.zmiana_biasow[i]
@@ -185,6 +204,7 @@ class mlp:
         for i in range(len(wejscia)):
             loss += self.uczenie(wejscia[i], etykiety[i])
         self.zamiana_wag()
+        self.poprzednia_zmiana_wag = np.copy(self.zmiana_wag)
         return loss/len(wejscia)
 
 
@@ -194,7 +214,7 @@ class mlp:
         forward = self.forward_propagation(wejscie)
         cross_entropy = self.cross_entropy(forward, etykieta)
         self.errors_back_prop(etykieta)
-        self.set_change()
+        self.set_gradient_wag()
         return cross_entropy
 
     def uczenie_calosc(self, wejscia, etykiety, epoki, batch_size):
@@ -232,3 +252,20 @@ class mlp:
                 wszystkie += 1
             macierz_odpowiedzi[wynik][etykiety[i]]+=1
         return round(dobre/(wszystkie), 4) *100,macierz_odpowiedzi
+
+
+#########################################################
+############ funkcje zwiazane z momentum ################
+#########################################################
+
+    def momentum(self, wspolczynnik_momentum):
+        for i in range(len(self.zmiana_wag)):
+            self.zmiana_wag[i] = wspolczynnik_momentum * self.poprzednia_zmiana_wag[i] + self.wspolczynnik_uczenia * self.gradient_wag[i]
+
+    def momentum_nesterova(self, wspolczynnik_momentum):
+        for i in range(len(self.zmiana_wag)):
+            self.zmiana_wag[i] = wspolczynnik_momentum * self.poprzednia_zmiana_wag[i] + self.wspolczynnik_uczenia * (self.gradient_wag[i] - wspolczynnik_momentum * self.poprzednia_zmiana_wag[i])
+
+    def adagrad(self):
+        for i in range(len(self.zmiana_wag)):
+            self.zmiana_wag[i] = self.poprzednia_zmiana_wag[i] - np.outer((self.wspolczynnik_uczenia/np.sqrt(self.sumowane_kwadraty_zmian[i] + 1e-8)),self.gradient_wag[i])
