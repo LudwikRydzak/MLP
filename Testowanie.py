@@ -13,6 +13,7 @@ class Testowanie:
         self.x_epoki = []
         self.x_procenty = []
         self.rozmiary_sieci = [784,70,10]
+        self.wspolczynnik_momentum = 0.8
 
     def test_hidden_layer(self, train_set, train_labels, test_set, test_labels):
         with open('badania_hidden_size.txt', 'w') as file:
