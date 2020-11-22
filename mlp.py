@@ -5,10 +5,14 @@ import numpy as np
 
 class mlp:
 
-    def __init__(self, _layers_size, _weight_range, _bias_range, _activation_functions, _break_rule, learning_rate, opcja_momentum, wspolczynnik_momentum):
+    def __init__(self, _layers_size, _weight_range, _bias_range, _activation_functions, _break_rule, learning_rate,
+                 opcja_momentum, wspolczynnik_momentum, wspolczynnik_momentum2):
         self.layers_size = _layers_size  # rozmiary warstw, rozmiar wejśicia podawany jest jako zerowa warstwa
         self.activation_functions = _activation_functions
         self.break_rule = _break_rule
+        self.wspolczynnik_uczenia = learning_rate
+        self.wspolczynnik_momentum = wspolczynnik_momentum
+        self.wspolczynnik_momentum2 = wspolczynnik_momentum2
         self.weights = []
         self.biases = []
         self.zmiana_wag = []
@@ -19,8 +23,7 @@ class mlp:
         self.wyjscia = []
         self.wejscia = []
         self.errors = []
-        self.wspolczynnik_uczenia = learning_rate
-        self.wspolczynnik_momentum = wspolczynnik_momentum
+
         self.opcja_momentum = opcja_momentum
         self.sumowane_kwadraty_zmian = []
         self.sumowane_kwadraty_wag = []
@@ -146,9 +149,11 @@ class mlp:
 
     def softMax(self, _x):
         sum = 0
-        for x in _x:
-            sum += np.exp(x/100)
-        return np.exp(_x/100) / sum
+        for i in range(len(_x)):
+            if(_x[i]>10):
+                _x[i]=10
+            sum+=np.exp(_x[i])
+        return np.exp(_x) / sum
 
     def derivative_softmax(self, s):
         # https://stackoverflow.com/questions/54976533/derivative-of-softmax-function-in-python
