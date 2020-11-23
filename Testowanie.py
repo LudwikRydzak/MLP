@@ -13,10 +13,9 @@ class Testowanie:
         self.x_epoki = []
         self.x_procenty = []
         self.rozmiary_sieci = [784,70,10]
-        self.wspolczynnik_momentum = 0.8
 
     def test_hidden_layer(self, train_set, train_labels, test_set, test_labels):
-        with open('badania_momentum.txt', 'w') as file:
+        with open('badania_hidden_size.txt', 'w') as file:
             file.writelines('liczba neuronów warstwy ukrytej;liczba epok;poprawne_odpowiedzi\n')
             for size in self.hidden_layer_sizes:
                 suma_procentów =0
@@ -24,7 +23,7 @@ class Testowanie:
                 print(f'rozmiar ukrytej: {size}')
                 for iteracja in range(10):
                     #         rozmiar macierzy  wagi_range         sigmoid        współczynnik uczenia
-                    network = mlp([784,size,10], [-1,1], self.biasrange, [2], self.break_rule, 0.1, )
+                    network = mlp([784,size,10], [-1,1], self.biasrange, [2], self.break_rule, 0.1)
                     liczba_epok = network.uczenie_calosc(train_set, train_labels, epoki=500, batch_size=32)
                     print(f'iteracja: {iteracja} badana zmianna:{size} liczba epok: {liczba_epok}\n')
                     np.set_printoptions(suppress=True)

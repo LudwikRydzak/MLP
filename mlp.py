@@ -23,7 +23,7 @@ class mlp:
         self.wyjscia = []
         self.wejscia = []
         self.errors = []
-
+        self.loss = 30
         self.opcja_momentum = opcja_momentum
         self.sumowane_kwadraty_zmian = []
         self.sumowane_kwadraty_wag = []
@@ -208,9 +208,8 @@ class mlp:
             self.gradient_wag[i] += a
             self.zmiana_biasow[i] += -self.errors[i] * self.wspolczynnik_uczenia
             if(self.opcja_momentum == 3):
-                for warstwa in range(len(self.layers_size)-1):
-                    for neuron in range(self.layers_size[warstwa+1]):
-                        self.sumowane_kwadraty_zmian[warstwa][neuron][neuron] += np.dot(self.gradient_wag[i][warstwa][neuron],self.gradient_wag[i][warstwa][neuron])
+                for neuron in range(self.layers_size[i+1]):
+                    self.sumowane_kwadraty_zmian[i][neuron][neuron] += np.dot(self.gradient_wag[i][neuron],self.gradient_wag[i][neuron])
             elif(self.opcja_momentum ==4):
                 self.sumowane_kwadraty_zmian[i] = self.wspolczynnik_momentum * self.sumowane_kwadraty_zmian[i] + (1-self.wspolczynnik_momentum)*(self.gradient_wag[i]**2)
             elif(self.opcja_momentum ==5):
@@ -257,15 +256,14 @@ class mlp:
 
     def uczenie_calosc(self, wejscia, etykiety, epoki, batch_size):
         for epoka in range(epoki):
-            loss=0
             randomstart = round(self.get_random_from_range([0,50000-batch_size-1]))
             minibatch_etykiety = etykiety[randomstart:randomstart+batch_size]
             minibach_wejscia = wejscia[randomstart:randomstart+batch_size]
             for i in range(batch_size):
-                loss = self.gradient_descent(minibach_wejscia, minibatch_etykiety)
-                if loss < self.break_rule:
+                self.loss = (self.loss+self.gradient_descent(minibach_wejscia, minibatch_etykiety))/2
+                if self.loss < self.break_rule:
                     return epoka
-            print(epoka, loss)
+            print(epoka, self.loss)
         return epoki
 
     def wynikowa_etykieta(self, etykiety):

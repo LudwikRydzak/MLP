@@ -26,7 +26,7 @@ print('------')
 # print(f'{procent}%')
 # print(macierz_odpowiedzi)
 testowanie = Testowanie2()
-testowanie.test_activation_function(img,labs, valimg, vallabs)
+testowanie.test_adagrad(img,labs, valimg, vallabs)
 
 # print(mndata.display(images[0]))
 # print(labels[0])
