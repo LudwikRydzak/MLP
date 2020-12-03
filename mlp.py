@@ -6,7 +6,8 @@ import numpy as np
 class mlp:
 
     def __init__(self, _layers_size, _weight_range, _bias_range, _activation_functions, _break_rule, learning_rate,
-                 opcja_momentum, wspolczynnik_momentum, wspolczynnik_momentum2):
+                 opcja_momentum, wspolczynnik_momentum, wspolczynnik_momentum2, opcja_inicjacji_wag):
+        self.opcja_wag = opcja_inicjacji_wag
         self.layers_size = _layers_size  # rozmiary warstw, rozmiar wejśicia podawany jest jako zerowa warstwa
         self.activation_functions = _activation_functions
         self.break_rule = _break_rule
@@ -27,30 +28,71 @@ class mlp:
         self.opcja_momentum = opcja_momentum
         self.sumowane_kwadraty_zmian = []
         self.sumowane_kwadraty_wag = []
-        self.sumowane_zmiany =[]
+        self.sumowane_zmiany = []
+        self.t = 0
         for l in range(len(_layers_size) - 1):  # liczba macierzy
             # self.weights.append(
             #     np.array([[(self.get_random_from_range(_weight_range)) for col in range(_layers_size[l])] for row in
             #               range(_layers_size[l + 1])]))
-            self.weights.append(np.array(self.inicjacja_wag(1, _layers_size[l], _layers_size[l+1])))
+            # self.weights.append(np.array(self.inicjacja_wag(1, _layers_size[l], _layers_size[l + 1])))
+            self.weights.append(self.inicjacja_wag(self.opcja_wag,_layers_size[l],self.layers_size[l+1]).T)
             self.biases.append(self.get_random_from_range(_weight_range))
             self.pobudzenia.append(np.array([]))
             self.wyjscia.append(np.array([]))
             self.wejscia.append(np.array([]))
             self.errors.append(np.array([]))
-            self.zmiana_wag.append(np.zeros((_layers_size[l+1],_layers_size[l])))
-            self.gradient_wag.append(np.zeros((_layers_size[l+1],_layers_size[l])))
-            self.poprzednia_zmiana_wag.append(np.zeros((_layers_size[l+1],_layers_size[l])))
+            self.zmiana_wag.append(np.zeros((_layers_size[l + 1], _layers_size[l])))
+            self.gradient_wag.append(np.zeros((_layers_size[l + 1], _layers_size[l])))
+            self.poprzednia_zmiana_wag.append(np.zeros((_layers_size[l + 1], _layers_size[l])))
             if (self.opcja_momentum == 3):
-                self.sumowane_kwadraty_zmian.append(np.zeros((_layers_size[l+1],_layers_size[l+1])))
-            elif(self.opcja_momentum ==4):
+                self.sumowane_kwadraty_zmian.append(np.zeros((_layers_size[l + 1], _layers_size[l + 1])))
+            elif (self.opcja_momentum == 4):
                 self.sumowane_kwadraty_zmian.append(np.zeros((_layers_size[l + 1], _layers_size[l])))
             elif (self.opcja_momentum == 5):
                 self.sumowane_kwadraty_zmian.append(np.zeros((_layers_size[l + 1], _layers_size[l])))
                 self.sumowane_zmiany.append(np.zeros((_layers_size[l + 1], _layers_size[l])))
-            self.sumowane_kwadraty_wag.append(np.ones((_layers_size[l+1],_layers_size[l]))*1e-8)
-            self.zmiana_biasow.append(np.zeros(_layers_size[l+1]))
+            self.sumowane_kwadraty_wag.append(np.ones((_layers_size[l + 1], _layers_size[l])) * 1e-8)
+            self.zmiana_biasow.append(np.zeros(_layers_size[l + 1]))
 
+    #########################################################
+    ############ funkcje zwiazane z momentum ################
+    #########################################################
+
+    def momentum(self):
+        for i in range(len(self.zmiana_wag)):
+            self.zmiana_wag[i] = self.wspolczynnik_momentum * self.poprzednia_zmiana_wag[
+                i] + self.wspolczynnik_uczenia * \
+                                 self.gradient_wag[i]
+
+    def momentum_nesterova(self):
+        for i in range(len(self.zmiana_wag)):
+            self.zmiana_wag[i] = self.wspolczynnik_momentum * self.poprzednia_zmiana_wag[
+                i] + self.wspolczynnik_uczenia * (
+                                         self.gradient_wag[i] - self.wspolczynnik_momentum * self.poprzednia_zmiana_wag[
+                                     i])
+
+    def adagrad(self):
+        for i in range(len(self.zmiana_wag)):
+            rms = np.diag(np.diag(self.wspolczynnik_uczenia / (np.sqrt(self.sumowane_kwadraty_zmian[i]) + 1e-8)))
+            # print(rms)
+            self.zmiana_wag[i] = self.poprzednia_zmiana_wag[i] + np.dot(rms, self.gradient_wag[i])
+
+    def adadelta(self):
+        for i in range(len(self.zmiana_wag)):
+            rmsgrad_reversed = np.sqrt(self.sumowane_kwadraty_zmian[i])
+            rmswag = np.sqrt(self.sumowane_kwadraty_wag[i])
+            ulamek = rmswag / (rmsgrad_reversed + 1e-8)
+            self.zmiana_wag[i] = (ulamek * self.gradient_wag[i])
+        for warstwa in range(len(self.layers_size) - 1):
+            self.sumowane_kwadraty_wag[warstwa] = self.wspolczynnik_momentum * self.sumowane_kwadraty_wag[warstwa] + (
+                    1 - self.wspolczynnik_momentum) * (self.zmiana_wag[warstwa] ** 2)
+
+    def adam(self):
+        self.t+=1
+        for i in range(len(self.zmiana_wag)):
+            m = self.sumowane_zmiany[i] / (1 - (self.wspolczynnik_momentum**self.t))
+            v = self.sumowane_kwadraty_zmian[i] / (1 - (self.wspolczynnik_momentum2**self.t))
+            self.zmiana_wag[i] =  self.wspolczynnik_uczenia * m / (np.sqrt(v) + 1e-8)
 
     def inicjacja_wag(self, ini, input_size, output_size):
         if (ini == 1):  # xavier
@@ -58,8 +100,8 @@ class mlp:
         elif (ini == 2):  # he
             var = 2 / input_size
         else:
-            var = 1/ input_size
-        return np.random.normal(0, var, size=(output_size, input_size))
+            var = 1
+        return np.random.normal(0, var, size=(input_size, output_size))
 
     def display_mlp(self):
         for i in self.weights:
@@ -150,9 +192,9 @@ class mlp:
     def softMax(self, _x):
         sum = 0
         for i in range(len(_x)):
-            if(_x[i]>10):
-                _x[i]=10
-            sum+=np.exp(_x[i])
+            if (_x[i] > 10):
+                _x[i] = 10
+            sum += np.exp(_x[i])
         return np.exp(_x) / sum
 
     def derivative_softmax(self, s):
@@ -193,7 +235,7 @@ class mlp:
     def cross_entropy(self, p, q):
         wynik = 0
         for j in range(len(p)):
-            wynik +=(-p[j] * math.log(q[j]+1e-15))
+            wynik += (-p[j] * math.log(q[j] + 1e-15))
         return wynik
 
     def errors_back_prop(self, labels):
@@ -207,27 +249,30 @@ class mlp:
             a = -np.outer(self.errors[i], self.wejscia[i])
             self.gradient_wag[i] += a
             self.zmiana_biasow[i] += -self.errors[i] * self.wspolczynnik_uczenia
-            if(self.opcja_momentum == 3):
-                for neuron in range(self.layers_size[i+1]):
-                    self.sumowane_kwadraty_zmian[i][neuron][neuron] += np.dot(self.gradient_wag[i][neuron],self.gradient_wag[i][neuron])
-            elif(self.opcja_momentum ==4):
-                self.sumowane_kwadraty_zmian[i] = self.wspolczynnik_momentum * self.sumowane_kwadraty_zmian[i] + (1-self.wspolczynnik_momentum)*(self.gradient_wag[i]**2)
-            elif(self.opcja_momentum ==5):
+            if (self.opcja_momentum == 3):
+                for neuron in range(self.layers_size[i + 1]):
+                    self.sumowane_kwadraty_zmian[i][neuron][neuron] += np.dot(self.gradient_wag[i][neuron],
+                                                                              self.gradient_wag[i][neuron])
+            elif (self.opcja_momentum == 4):
                 self.sumowane_kwadraty_zmian[i] = self.wspolczynnik_momentum * self.sumowane_kwadraty_zmian[i] + (
-                            1 - self.wspolczynnik_momentum) * (self.gradient_wag[i] ** 2)
-                self.sumowane_zmiany[i] = self.wspolczynnik_momentum * self.sumowane_zmiany[i] + (1-self.wspolczynnik_momentum)*(self.gradient_wag[i])
+                        1 - self.wspolczynnik_momentum) * (self.gradient_wag[i] ** 2)
+            elif (self.opcja_momentum == 5):
+                self.sumowane_kwadraty_zmian[i] = self.wspolczynnik_momentum2 * self.sumowane_kwadraty_zmian[i] + (
+                        1 - self.wspolczynnik_momentum2) * (self.gradient_wag[i] ** 2)
+                self.sumowane_zmiany[i] = self.wspolczynnik_momentum * self.sumowane_zmiany[i] + (
+                        1 - self.wspolczynnik_momentum) * (self.gradient_wag[i])
 
     def zamiana_wag(self):
         self.set_gradient_wag()
-        if(self.opcja_momentum == 1):
+        if (self.opcja_momentum == 1):
             self.momentum()
-        elif(self.opcja_momentum == 2):
+        elif (self.opcja_momentum == 2):
             self.momentum_nesterova()
-        elif(self.opcja_momentum == 3):
+        elif (self.opcja_momentum == 3):
             self.adagrad()
-        elif(self.opcja_momentum == 4):
+        elif (self.opcja_momentum == 4):
             self.adadelta()
-        elif(self.opcja_momentum == 5):
+        elif (self.opcja_momentum == 5):
             self.adam()
 
         for i in range(len(self.weights)):
@@ -237,13 +282,13 @@ class mlp:
             self.zmiana_biasow[i] *= 0
             self.gradient_wag[i] *= 0
 
-    def gradient_descent(self, wejscia, etykiety, loss=0):
+    def gradient_descent(self, wejscia, etykiety):
+        loss = 0
         for i in range(len(wejscia)):
             loss += self.uczenie(wejscia[i], etykiety[i])
         self.zamiana_wag()
         self.poprzednia_zmiana_wag = np.copy(self.zmiana_wag)
-        return loss/len(wejscia)
-
+        return loss / len(wejscia)
 
     def uczenie(self, wejscie, _etykieta):
         etykieta = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
@@ -255,16 +300,21 @@ class mlp:
         return cross_entropy
 
     def uczenie_calosc(self, wejscia, etykiety, epoki, batch_size):
+        table = [0] * 200
         for epoka in range(epoki):
-            randomstart = round(self.get_random_from_range([0,50000-batch_size-1]))
-            minibatch_etykiety = etykiety[randomstart:randomstart+batch_size]
-            minibach_wejscia = wejscia[randomstart:randomstart+batch_size]
+            randomstart = round(self.get_random_from_range([0, 50000 - batch_size - 1]))
+            minibatch_etykiety = etykiety[randomstart:randomstart + batch_size]
+            minibach_wejscia = wejscia[randomstart:randomstart + batch_size]
             for i in range(batch_size):
-                self.loss = (self.loss+self.gradient_descent(minibach_wejscia, minibatch_etykiety))/2
+                self.loss = (self.loss + self.gradient_descent(minibach_wejscia, minibatch_etykiety)) / 2
                 if self.loss < self.break_rule:
-                    return epoka
+                    table[epoka] = self.loss
+                    print(epoka, self.loss)
+                    return epoka, table
+            table[epoka] = self.loss
             print(epoka, self.loss)
-        return epoki
+        return epoki, table
+
 
     def wynikowa_etykieta(self, etykiety):
         max = 0
@@ -275,50 +325,24 @@ class mlp:
                 max = etykiety[j]
         return i
 
+
     def validate(self, wejscia, etykiety):
-        wszystkie = 0
-        dobre = 0
-        macierz_odpowiedzi = np.zeros((10,10))
+        TP = 0
+        TN = 0
+        FP = 0
+        FN = 0
+        macierz_odpowiedzi = np.zeros((10, 10))
         for i in range(len(wejscia)):
             wynik = self.wynikowa_etykieta(self.forward_propagation(wejscia[i]))
             if (wynik == etykiety[i]):
-                wszystkie += 1
-                dobre += 1
+                TP += 1
+                TN += 9
             else:
-                wszystkie += 1
-            macierz_odpowiedzi[wynik][etykiety[i]]+=1
-        return round(dobre/(wszystkie), 4) *100,macierz_odpowiedzi
+                TN += 8
+                FP += 1
+                FN += 1
+            macierz_odpowiedzi[wynik][etykiety[i]] += 1
+        # return round(dobre/(wszystkie), 4) *100,macierz_odpowiedzi
+        return TP, TN, FP, FN, macierz_odpowiedzi
 
 
-#########################################################
-############ funkcje zwiazane z momentum ################
-#########################################################
-
-    def momentum(self):
-        for i in range(len(self.zmiana_wag)):
-            self.zmiana_wag[i] = self.wspolczynnik_momentum * self.poprzednia_zmiana_wag[i] + self.wspolczynnik_uczenia * self.gradient_wag[i]
-
-    def momentum_nesterova(self):
-        for i in range(len(self.zmiana_wag)):
-            self.zmiana_wag[i] = self.wspolczynnik_momentum * self.poprzednia_zmiana_wag[i] + self.wspolczynnik_uczenia * (self.gradient_wag[i] - self.wspolczynnik_momentum * self.poprzednia_zmiana_wag[i])
-
-    def adagrad(self):
-        for i in range(len(self.zmiana_wag)):
-            rms = np.diag(np.diag(self.wspolczynnik_uczenia/(np.sqrt(self.sumowane_kwadraty_zmian[i])+ 1e-8)))
-            # print(rms)
-            self.zmiana_wag[i] = self.poprzednia_zmiana_wag[i] + np.dot(rms,self.gradient_wag[i])
-
-    def adadelta(self):
-        for i in range(len(self.zmiana_wag)):
-            rmsgrad_reversed =np.sqrt(self.sumowane_kwadraty_zmian[i])
-            rmswag = np.sqrt(self.sumowane_kwadraty_wag[i])
-            ulamek = rmswag/(rmsgrad_reversed+1e-8)
-            self.zmiana_wag[i] = (ulamek*self.gradient_wag[i])
-        for warstwa in range(len(self.layers_size)-1):
-            self.sumowane_kwadraty_wag[warstwa] = self.wspolczynnik_momentum * self.sumowane_kwadraty_wag[warstwa] + (
-                        1 - self.wspolczynnik_momentum) * (self.zmiana_wag[warstwa]**2)
-    def adam(self):
-        for i in range(len(self.zmiana_wag)):
-            m = self.sumowane_zmiany[i]/(1-self.wspolczynnik_momentum)
-            v = self.sumowane_kwadraty_zmian[i]/(1-self.wspolczynnik_momentum)
-            self.zmiana_wag[i] = self.zmiana_wag[i] + (self.wspolczynnik_uczenia * m)/ (np.sqrt(v)+1e-8)
